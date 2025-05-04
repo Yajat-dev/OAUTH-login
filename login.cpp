@@ -21,5 +21,7 @@ int main(int n, char** argv) {
 	cerr << verifier;
 	verifier.encode();
 	cerr << verifier;
+	verifier.decode();
+	cerr << verifier;
     return 0;
 }
