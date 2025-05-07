@@ -82,7 +82,7 @@ void Code::decode()
 	}
 }
 
-void Code::create()		// random values of 96 bits in total
+void Code::draw()		// random values of 96 bits in total
 {
 	srand(time(NULL));
 	size_t length = CODE/sizeof(unsigned int);
@@ -93,11 +93,8 @@ void Code::create()		// random values of 96 bits in total
 
 ostream& operator<<(ostream& os, const Code& c)
 {
-	cerr << "Code: ";
-	for (int i = 0; i < CODE; i++) os << hex << uppercase << setw(2) << setfill('0') << (0xFF & int(c.data[i])); os << endl;
-	cerr << "Base: ";
-	os << c.base << endl;
-	cerr << "Sha: ";
-	for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) os << hex << uppercase << setw(2) << setfill('0') << (0xFF & int(c.hash[i])); os << endl;
+	cerr << "Code: "; for (int i = 0; i < CODE; i++) os << hex << uppercase << setw(2) << setfill('0') << (0xFF & int(c.data[i])); os << endl;
+	cerr << "Base: "; os << c.base << endl;
+	cerr << "Sha: "; for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) os << hex << uppercase << setw(2) << setfill('0') << (0xFF & int(c.hash[i])); os << endl;
 	return os;
 }

@@ -9,7 +9,7 @@ struct Context {
 	bool help;
 	int server, client, port;
 	Code crypto;
-	std::string hint, code, refresh, secret;
+	std::string home, hint, code, refresh, secret;
 	using options = std::variant<std::monostate, std::string*>;
 	private:
 	bool set(options&, const char*);

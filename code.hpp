@@ -11,7 +11,7 @@ class Code {
 		std::string encode(const unsigned char*, size_t) const;
 	public:
 		Code();
-		void create();
+		void draw();
 		std::string base64() { return base; }
 		void encode() { base = encode(data, CODE); }
 		void encrypt() { SHA256((const unsigned char*)base.c_str(), base.size(), hash); }

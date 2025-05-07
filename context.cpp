@@ -6,15 +6,16 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <utime.h>
+#include <cstdlib>
 
 #include <string>
 #include <sstream>
-#include <fstream>
 #include <iomanip>
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
+#include "file.hpp"
 #include "context.hpp"
 
 #define CLIENT_ID "1066306325374-itr5ih1ivquo8hmi841ts7mumv2vn2k4.apps.googleusercontent.com"
@@ -77,7 +78,8 @@ Example:
 }
 
 ostream& operator<<(ostream& oss, const Context& context) {
-	oss << "mail hint: " << context.hint;
+	oss << "home dir: " << context.home << endl
+		<< "mail hint: " << context.hint;
 	if (context.verbose) {
 		if (context.debug) oss << ", debug";
 		else oss << ", verbose";
@@ -88,11 +90,12 @@ ostream& operator<<(ostream& oss, const Context& context) {
 
 Context::Context(){
 	verbose = debug = confirm = false;
+	home = getenv("HOME");
 }
 
 bool Context::getAccess()
 {
-	ifstream secret(".token");
+	File secret(home + "/.config/mutt/" + hint + "/token");
 	if (secret) {
 		string token;
 		secret >> token;
@@ -129,7 +132,7 @@ bool Context::getAccess()
 
 	port = ntohs(addr.sin_port);
     cerr << "Listening on port: " << port << endl;
-	crypto.create();
+	crypto.draw();
 	crypto.encode();
 	crypto.encrypt();
 	cerr << crypto;
@@ -250,7 +253,7 @@ void Context::getToken() {
 	getline(keys, key, ' ');
 	getline(keys, key, '"');
 	getline(keys, key, '"');
-	ofstream secret(".token");
+	File secret(home + "/.config/mutt/" + hint + "/token");
 	secret << key;
 	cout << key;
 	utimbuf times;

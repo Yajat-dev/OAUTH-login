@@ -10,7 +10,6 @@ void getSecrets() {
 }
 
 int main(int n, char** argv) {
-
 	context.parse(n, argv);
 	if (context.getAccess())
 		context.getToken();
