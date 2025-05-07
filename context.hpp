@@ -2,18 +2,21 @@
 
 #include <string>
 #include <variant>
+#include "code.hpp"
 
 struct Context {
-	static bool verbose, debug, confirm;
+	bool verbose, debug, confirm;
 	bool help;
 	int server, client, port;
-	std::string hint, code, refresh, token;
+	Code crypto;
+	std::string hint, code, refresh, secret;
 	using options = std::variant<std::monostate, std::string*>;
 	private:
 	bool set(options&, const char*);
+	std::string url_encode(const std::string&);
 	public:
-	bool connect();
-	std::string verifier(size_t);
+	bool getAccess();
+	void getToken();
 	Context();
 	~Context();
 	void parse(size_t, char**);

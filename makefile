@@ -3,13 +3,15 @@ CFLAGS = -o2
 SRC = code.cpp context.cpp helper.cpp login.cpp
 INC = code.hpp context.hpp helper.hpp
 OBJ = $(SRC:%.cpp=%.o)
+LDFLAGS = -lcrypto -lssl
+BIN = oauth.login
 
-.PHONY: all debug clean
+.PHONY: all debug clean install
 
-all: oauth.login
+all: $(BIN)
 
-oauth.login: $(OBJ)
-	$(CC) $(CFLAGS) $^ -o $@
+$(BIN): $(OBJ)
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 login.o: login.cpp $(INC)
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -22,3 +24,6 @@ debug: all
 
 clean: 
 	rm *.o oauth.login
+
+install:
+	install -m 700 $(BIN) ~/.local/bin/

@@ -2,7 +2,6 @@
 #include <cstring>
 #include <ctime>
 #include <iomanip>
-#include <arpa/inet.h>
 
 #include "code.hpp"
 
@@ -28,37 +27,37 @@ char get(unsigned short c)
 int get(char c)
 {
 	constexpr size_t v = 'Z' - 'A' + 1;
-	if (c == '-') return 62; 
-	if (c < '0') return -1; 
-	if (c <= '9') return c - '0' + v + v; 
-	if (c < 'A') return -1; 
-	if (c <= 'Z') return c - 'A'; 
-	if (c == '_') return 63; 
-	if (c < 'a') return -1; 
-	if (c <= 'z') return c - 'a' + v; 
+	if (c == '-') return 62;
+	if (c < '0') return -1;
+	if (c <= '9') return c - '0' + v + v;
+	if (c < 'A') return -1;
+	if (c <= 'Z') return c - 'A';
+	if (c == '_') return 63;
+	if (c < 'a') return -1;
+	if (c <= 'z') return c - 'a' + v;
 	return -1;
 }
 
-void Code::encode()
+string Code::encode(const unsigned char* data, size_t length) const
 {
 	unsigned int x = 0;
 	unsigned short y;
-	cerr << "encoding" << endl;
-	base.clear();
+	string res;
 	int b = 0;
-	for (int i = 0; i < CODE; i++) {
+	for (int i = 0; i < length; i++) {
 		x = (x << 8) | data[i];
 		b += 8;
-		while (b > 6) {
+		while (b > 5) {
 			b -= 6;
 			y = (x >> b) & 0x3F;
-			base.push_back(get(y));
+			res.push_back(get(y));
 		}
 	}
 	if (b > 0) {
-		y = x & 0x3F;
-		base.push_back(get(y));
+		y = (x << (6 - b)) & 0x3F;
+		res.push_back(get(y));
 	}
+	return res;
 }
 
 void Code::decode()
@@ -67,7 +66,6 @@ void Code::decode()
 	int y, b = 0;
 	size_t i = 0;
 	memset(data, 0, sizeof(data));
-	cerr << "decoding" << endl;
 	for(auto c: base) {
 		y = get(c);
 		x = (x << 6) | y;
@@ -95,8 +93,11 @@ void Code::create()		// random values of 96 bits in total
 
 ostream& operator<<(ostream& os, const Code& c)
 {
-	os << "Code:";
-	for (int i = 0; i < CODE; i++) os << ' ' << hex << uppercase << setw(2) << std::setfill('0') << int(c.data[i]);
-	os << endl << "Base: " << c.base << endl;
+	cerr << "Code: ";
+	for (int i = 0; i < CODE; i++) os << hex << uppercase << setw(2) << setfill('0') << (0xFF & int(c.data[i])); os << endl;
+	cerr << "Base: ";
+	os << c.base << endl;
+	cerr << "Sha: ";
+	for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) os << hex << uppercase << setw(2) << setfill('0') << (0xFF & int(c.hash[i])); os << endl;
 	return os;
 }
