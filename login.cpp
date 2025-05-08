@@ -1,4 +1,7 @@
 #include <iostream>
+#include <fstream>
+#include <iomanip>
+#include <ctime>
 
 #include "context.hpp"
 
@@ -11,7 +14,10 @@ void getSecrets() {
 
 int main(int n, char** argv) {
 	context.parse(n, argv);
-	if (context.getAccess())
-		context.getToken();
+	auto now = time(nullptr);
+	ofstream log(".oauth.login.log", ios::app);
+	log << put_time(localtime(&now), "%Y.%m.%d %H:%M:%S") << ' ' << context.hint << endl;
+	while (context.getAccess()
+		&& context.getSecret());
     return 0;
 }

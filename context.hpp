@@ -5,18 +5,20 @@
 #include "code.hpp"
 
 struct Context {
-	bool verbose, debug, confirm;
-	bool help;
+	bool verbose, debug, confirm, help;
 	int server, client, port;
 	Code crypto;
 	std::string home, hint, code, refresh, secret;
 	using options = std::variant<std::monostate, std::string*>;
 	private:
 	bool set(options&, const char*);
-	std::string url_encode(const std::string&);
+	std::string urlEncode(const std::string&);
+	std::string getToken(const std::string&, const std::string&) const;
+	time_t getTime(std::string&&, const std::string&) const;
+	std::string getJson(std::string&&) const;
 	public:
 	bool getAccess();
-	void getToken();
+	bool getSecret();
 	Context();
 	~Context();
 	void parse(size_t, char**);

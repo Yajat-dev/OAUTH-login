@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cstring>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -20,6 +21,7 @@
 
 #define CLIENT_ID "1066306325374-itr5ih1ivquo8hmi841ts7mumv2vn2k4.apps.googleusercontent.com"
 #define CLIENT_SECRET "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"
+#define MUTT_CONFIG "/.mutt/accounts/"
 
 using namespace std;
 
@@ -27,9 +29,7 @@ bool Context::set(options& option, const char* arg)		// return value means data 
 {
 	if (get_if<monostate>(&option)) return false;
 	if (!*arg) return true;
-	try {
-		if (auto param = get_if<string*>(&option)) **param = arg;
-	}
+	try { if (auto param = get_if<string*>(&option)) **param = arg; }
 	catch (exception e) {}
 	option = monostate{};
 	return true;
@@ -78,13 +78,13 @@ Example:
 }
 
 ostream& operator<<(ostream& oss, const Context& context) {
-	oss << "home dir: " << context.home << endl
-		<< "mail hint: " << context.hint;
+	oss << "e-mail:" << context.hint;
 	if (context.verbose) {
 		if (context.debug) oss << ", debug";
 		else oss << ", verbose";
 	}
 	if (context.confirm) oss << ", confirm";
+	oss << ", PID: " << getpid();
 	return oss << endl;
 }
 
@@ -95,39 +95,52 @@ Context::Context(){
 
 bool Context::getAccess()
 {
-	File secret(home + "/.config/mutt/" + hint + "/token");
-	if (secret) {
-		string token;
-		secret >> token;
-		cout << token;
-		return false;
+	File access(home + MUTT_CONFIG + hint + "/access_token");
+	if (access) {
+		struct stat info;
+		stat(access.getName().c_str(), &info);
+		cerr << "Found access token file: " << access.getName() << endl;
+		if (info.st_mtime > time(0)) {
+			access >> secret;
+			if (!secret.empty()) {
+				cout << secret;
+				return false;
+			}
+		}
+		cerr << "... but token has expired or been revoked" << endl;
+		File reaccess(home + MUTT_CONFIG + hint + "/refresh_token");
+		cerr << "Found refresh token file: " << reaccess.getName() << endl;
+		reaccess >> refresh;
+		if (!refresh.empty()) return true;
+		cerr << "... but it is empty" << endl;
 	}
 
 	int server = socket(AF_INET, SOCK_STREAM, 0);
-    if (server == -1) { cerr << "Could not create socket: " << strerror(errno) << std::endl; return 1; }
+    if (server == -1) {
+		cerr << "Could not create socket: " << strerror(errno) << std::endl;
+		return false;
+	}
 
     // Tworzymy strukturę sockaddr_in dla IPv4
     struct sockaddr_in server_addr;
-    std::memset(&server_addr, 0, sizeof(server_addr)); // Zerujemy strukturę
+    std::memset(&server_addr, 0, sizeof(server_addr));
 
     server_addr.sin_family = AF_INET; // IPv4
     server_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    server_addr.sin_port = htons(0); // Dowolny port (0 - system przypisuje port)
+    server_addr.sin_port = htons(0);
 
-    // Łączymy gniazdo z adresem i portem
     if (bind(server, (struct sockaddr*) &server_addr, sizeof(server_addr)) == -1) {
-        cerr << "Bin error: " << strerror(errno) << std::endl;
+        cerr << "Bind error: " << strerror(errno) << std::endl;
         close(server);
-        return 1;
+        return false;
     }
 
-    // Uzyskujemy przydzielony port
     struct sockaddr_in addr;
     socklen_t addr_len = sizeof(addr);
     if (getsockname(server, (struct sockaddr*)&addr, &addr_len) == -1) {
-        std::cerr << "Błąd przy pobieraniu portu: " << strerror(errno) << std::endl;
+        std::cerr << "Error getting port number: " << strerror(errno) << std::endl;
         close(server);
-        return 1;
+        return false;
     }
 
 	port = ntohs(addr.sin_port);
@@ -151,7 +164,7 @@ bool Context::getAccess()
 		// << "prompt=consent" << '&'
 		<< "login_hint=" << hint;
 	command << "xdg-open 'https://accounts.google.com/o/oauth2/v2/auth?"
-		<< url_encode(options.str())
+		<< urlEncode(options.str())
 		<< "' >/dev/null";
 	cerr << endl << command.str() << endl;
 	system(command.str().c_str());
@@ -174,7 +187,6 @@ bool Context::getAccess()
 		<< endl
 		<< content.str() << endl;
 	send(redir, output.str().c_str(), output.str().size(), 0);
-
 	return true;
 }
 
@@ -184,7 +196,8 @@ Context::~Context() {
     close(client);
 }
 
-void Context::getToken() {
+bool Context::getSecret()
+{
 	const char* host = "oauth2.googleapis.com";
 	const char* port = "443";
 	SSL_library_init();
@@ -194,7 +207,7 @@ void Context::getToken() {
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
     if (!ctx) {
         cerr << "Can not create SSL context" << endl;
-        return;
+        return false;
     }
 
     // 3. Rozwiązanie hosta i połączenie TCP
@@ -202,13 +215,13 @@ void Context::getToken() {
     if (getaddrinfo(host, port, NULL, &res)) {
 		cerr << "Can not get address info for: " << host << endl
 			<< strerror(errno) << endl;
-        return;
+        return false;
     }
 
     int client = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
     if (::connect(client, res->ai_addr, res->ai_addrlen) != 0) {
         cerr << "Can not connect client socket to: " << host << endl;
-        return;
+        return false;
     }
 
     // 4. Tworzymy obiekt SSL i łączymy z socketem
@@ -218,19 +231,24 @@ void Context::getToken() {
     if (SSL_connect(ssl) < 1) {
         cerr << "Can not connect client SSL socket: ";
         ERR_print_errors_fp(stderr);
-        return;
+        return false;
     }
 
     cerr << "TLS/SSL handshake OK with " << host << "\n";
 	ostringstream output;
 	ostringstream content;
-	content << "code=" << code << '&'
-		// << "scope=https://mail.google.com/" << '&'
+	content 
 		<< "client_id=" CLIENT_ID << '&'
-		<< "client_secret=" CLIENT_SECRET << '&'
+		<< "client_secret=" CLIENT_SECRET << '&';
+	if (refresh.empty()) {
+		content << "code=" << code << '&'
 		<< "code_verifier=" << crypto.base64() << '&'
 		<< "redirect_uri=http://127.0.0.1:" << this->port << '&'
 		<< "grant_type=authorization_code";
+	} else {
+		content << "refresh_token=" << refresh << '&'
+			<< "grant_type=refresh_token";
+	}
 	string append = content.str();
 	output << "POST /token HTTP/1.1" << endl
 		<< "Host: oauth2.googleapis.com" << endl
@@ -238,30 +256,67 @@ void Context::getToken() {
 		<< "Content-Length: " << append.size() << endl
 		<< endl
 		<< append;
-	cerr << endl << "Sending: " << output.str() << endl;
+	cerr << endl << output.str() << endl;
 	SSL_write(ssl, output.str().c_str(), output.str().size());
 	cerr << endl << "Getting access token..." << endl;
 	string response;
 	response.resize(2048);
 	auto n = SSL_read(ssl, (void*)response.data(), response.capacity()); 
-	response.resize(n);
+	response = getJson(std::move(response));
 	cerr << endl << response << endl;
-	auto token = response.find("access_token");
-	if (token == -1) { cerr << "Token not found:" << response << endl; return; }
-	istringstream keys(response.substr(token));
-	string key;
-	getline(keys, key, ' ');
-	getline(keys, key, '"');
-	getline(keys, key, '"');
-	File secret(home + "/.config/mutt/" + hint + "/token");
-	secret << key;
-	cout << key;
-	utimbuf times;
-	times = {time(0), time(0)};
-	utime(".token", &times);
+
+	secret = getToken("access_token", response);
+	refresh = getToken("refresh_token", response);
+	if (secret.empty()) return true; // repeat whole sequence
+	cout << secret;
+	auto time = getTime("expires_in", response);
+
+	utimbuf times = {0, time};
+	string name = home + MUTT_CONFIG + hint + "/access_token";
+	utime(name.c_str(), &times);
+	return false;
 }
 
-string Context::url_encode(const string& value) {
+string Context::getJson(string&& text) const
+{
+	string value;
+	auto start = text.find('{');
+	if (start == -1) return value;
+	auto stop = text.find('}', start);
+	if (stop == -1) return value;
+	size_t n = 0;
+	if (stop < start) return value;
+	return text.substr(start, stop - start + 1);
+}
+
+string Context::getToken(const string& token, const string& text) const
+{
+	string value;
+	auto start = text.find(token);
+	if (start != -1) {
+		istringstream keys(text.substr(start));
+		getline(keys, value, ':');
+		getline(keys, value, '"');
+		getline(keys, value, '"');
+	}
+	File secret(home + MUTT_CONFIG + hint + '/' + token);
+	secret << value;
+	return value;
+}
+
+time_t Context::getTime(string&& token, const string& text) const
+{
+	unsigned long value = 0;
+	string dummy;
+	auto start = text.find(token);
+	if (start == -1) return value;
+	istringstream keys(text.substr(start));
+	getline(keys, dummy, ':');
+	keys >> value;
+	return value + time(0);
+}
+
+string Context::urlEncode(const string& value) {
     std::ostringstream encoded;
     for (unsigned char c : value) {
         // Znaki alfanumeryczne oraz '-', '_', '.', '~' nie są kodowane
