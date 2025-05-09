@@ -151,7 +151,7 @@ bool Context::getAccess()
 	crypto.draw();
 	crypto.encode();
 	crypto.encrypt();
-	if (verbose) cerr << crypto;
+	if (debug) cerr << crypto;
 	ostringstream command, options;
 	options << "response_type=code" << '&'
 		<< "redirect_uri=http://127.0.0.1:" << port << '&'
@@ -164,18 +164,18 @@ bool Context::getAccess()
 	command << "xdg-open 'https://accounts.google.com/o/oauth2/v2/auth?"
 		<< urlEncode(options.str())
 		<< "' >/dev/null";
-	cerr << endl << command.str() << endl;
+	if (debug) cerr << endl << command.str() << endl;
 	system(command.str().c_str());
 	listen(server, 1);
 	int redir = accept(server, 0, 0);
 	char request[1024];
 	size_t n = recv(redir, request, sizeof(request), 0);
 	request[n] = 0;
-	cerr << endl << "Redirected data: " << endl << request;
+	if (debug) cerr << endl << "Redirected data: " << endl << request;
 	istringstream input(request);
 	getline(input, code, '=');
 	getline(input, code, '&');
-	cerr << "Authentication code:" << code << endl;
+	if (debug) cerr << "Authentication code:" << code << endl;
 	ostringstream output, content;
 	content << "You may close the window" << endl;
 	output << "HTTP/1.1 200 OK" << endl
@@ -255,7 +255,7 @@ bool Context::getSecret()
 		<< append;
 	if (debug) cerr << endl << output.str() << endl;
 	SSL_write(ssl, output.str().c_str(), output.str().size());
-	cerr << endl << "Getting access token..." << endl;
+	if (verbose) cerr << endl << "Getting access token..." << endl;
 	string response;
 	response.resize(2048);
 	auto n = SSL_read(ssl, (void*)response.data(), response.capacity()); 
