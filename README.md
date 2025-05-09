@@ -7,7 +7,7 @@ Keeps tokens under user's local ~/.mutt/accounts folder ONLY.
 
 To build run `git clone git@github.com:Kontra2B/OAUTH-login`\
 Enter checked folder with `cd OAUTH-login`\
-Run `make` and `make install. Installs to ~/.local/bin.
+Run `make` and `make install`. Installs to ~/.local/bin.
 
 Tested with MUTT. An e-mail text client.\
 You need the following settings added to your .muttrc:
