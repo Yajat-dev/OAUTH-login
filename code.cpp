@@ -7,10 +7,7 @@
 
 using namespace std;
 
-Code::Code()
-{
-
-}
+Code::Code() {}
 
 char get(unsigned short c)
 {

@@ -120,35 +120,34 @@ bool Context::getAccess()
 	}
 
 	int server = socket(AF_INET, SOCK_STREAM, 0);
-    if (server == -1) {
+	if (server == -1) {
 		cerr << "Could not create socket: " << strerror(errno) << std::endl;
 		return false;
 	}
 
-    // Tworzymy strukturę sockaddr_in dla IPv4
-    struct sockaddr_in server_addr;
-    std::memset(&server_addr, 0, sizeof(server_addr));
+	struct sockaddr_in server_addr;
+	std::memset(&server_addr, 0, sizeof(server_addr));
 
-    server_addr.sin_family = AF_INET; // IPv4
-    server_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    server_addr.sin_port = htons(0);
+	server_addr.sin_family = AF_INET; // IPv4
+	server_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	server_addr.sin_port = htons(0);
 
-    if (bind(server, (struct sockaddr*) &server_addr, sizeof(server_addr)) == -1) {
-        cerr << "Bind error: " << strerror(errno) << std::endl;
-        close(server);
-        return false;
-    }
+	if (bind(server, (struct sockaddr*) &server_addr, sizeof(server_addr)) == -1) {
+		cerr << "Bind error: " << strerror(errno) << std::endl;
+		close(server);
+		return false;
+	}
 
-    struct sockaddr_in addr;
-    socklen_t addr_len = sizeof(addr);
-    if (getsockname(server, (struct sockaddr*)&addr, &addr_len) == -1) {
-        std::cerr << "Error getting port number: " << strerror(errno) << std::endl;
-        close(server);
-        return false;
-    }
+	struct sockaddr_in addr;
+	socklen_t addr_len = sizeof(addr);
+	if (getsockname(server, (struct sockaddr*)&addr, &addr_len) == -1) {
+		std::cerr << "Error getting port number: " << strerror(errno) << std::endl;
+		close(server);
+		return false;
+	}
 
 	port = ntohs(addr.sin_port);
-    if (verbose) cerr << "Listening on port: " << port << endl;
+	if (verbose) cerr << "Listening on port: " << port << endl;
 	crypto.draw();
 	crypto.encode();
 	crypto.encrypt();
@@ -161,11 +160,6 @@ bool Context::getAccess()
 		<< "code_challenge=" << crypto.challenge() << '&'
 		<< "code_challenge_method=S256" << '&'
 		<< "include_granted_scopes=true" << '&'
-		// << "service=lso" << '&'
-		// << "o2v=2" << '&'
-		// << "flowName=GeneraloAuthFlow" << '&'
-		// << "access_type=offline" << '&' 
-		// << "prompt=consent" << '&'
 		<< "login_hint=" << hint;
 	command << "xdg-open 'https://accounts.google.com/o/oauth2/v2/auth?"
 		<< urlEncode(options.str())
@@ -183,8 +177,7 @@ bool Context::getAccess()
 	getline(input, code, '&');
 	cerr << "Authentication code:" << code << endl;
 	ostringstream output, content;
-	content // << "Authentication code: " << code <<  endl
-		<< "You may close the window" << endl;
+	content << "You may close the window" << endl;
 	output << "HTTP/1.1 200 OK" << endl
 		<< "Content-Type: text/plain; charset=UTF-8" << endl
 		<< "Content-Length: " << content.str().size() << endl
@@ -205,40 +198,40 @@ bool Context::getSecret()
 	const char* host = "oauth2.googleapis.com";
 	const char* port = "443";
 	SSL_library_init();
-    SSL_load_error_strings();
+	SSL_load_error_strings();
 
-    if (debug) cerr << endl << "About to get access token..." << endl;
-    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
-    if (!ctx) {
-        cerr << "Can not create SSL context" << endl;
-        return false;
-    }
+	if (debug) cerr << endl << "About to get access token..." << endl;
+	SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+	if (!ctx) {
+		cerr << "Can not create SSL context" << endl;
+		return false;
+	}
 
-    // 3. Rozwiązanie hosta i połączenie TCP
-    struct addrinfo *res;
-    if (getaddrinfo(host, port, NULL, &res)) {
+	// 3. Rozwiązanie hosta i połączenie TCP
+	struct addrinfo *res;
+	if (getaddrinfo(host, port, NULL, &res)) {
 		cerr << "Can not get address info for: " << host << endl
 			<< strerror(errno) << endl;
-        return false;
-    }
+		return false;
+	}
 
-    int client = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-    if (::connect(client, res->ai_addr, res->ai_addrlen) != 0) {
-        cerr << "Can not connect client socket to: " << host << endl;
-        return false;
-    }
+	int client = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+	if (::connect(client, res->ai_addr, res->ai_addrlen) != 0) {
+		cerr << "Can not connect client socket to: " << host << endl;
+		return false;
+	}
 
-    // 4. Tworzymy obiekt SSL i łączymy z socketem
-    SSL* ssl = SSL_new(ctx);
-    SSL_set_fd(ssl, client);
+	// 4. Tworzymy obiekt SSL i łączymy z socketem
+	SSL* ssl = SSL_new(ctx);
+	SSL_set_fd(ssl, client);
 
-    if (SSL_connect(ssl) < 1) {
-        cerr << "Can not connect client SSL socket: ";
-        ERR_print_errors_fp(stderr);
-        return false;
-    }
+	if (SSL_connect(ssl) < 1) {
+		cerr << "Can not connect client SSL socket: ";
+		ERR_print_errors_fp(stderr);
+		return false;
+	}
 
-    if (debug) cerr << "TLS/SSL handshake OK with " << host << "\n";
+	if (debug) cerr << "TLS/SSL handshake OK with " << host << "\n";
 	ostringstream output;
 	ostringstream content;
 	content 
@@ -320,31 +313,11 @@ time_t Context::getTime(string&& token, const string& text) const
 }
 
 string Context::urlEncode(const string& value) {
-    std::ostringstream encoded;
-    for (unsigned char c : value) {
-        // Znaki alfanumeryczne oraz '-', '_', '.', '~' nie są kodowane
-        if (isalnum(c) || c == '&' || c == '=' || c == '-' || c == '_' || c == '.' || c == '~') encoded << c;
-        else encoded << '%' << uppercase << hex << setw(2) << setfill('0') << static_cast<int>(c);
-    }
-    return encoded.str();
+	std::ostringstream encoded;
+	for (unsigned char c : value) {
+		// Znaki alfanumeryczne oraz '-', '_', '.', '~' nie są kodowane
+		if (isalnum(c) || c == '&' || c == '=' || c == '-' || c == '_' || c == '.' || c == '~') encoded << c;
+		else encoded << '%' << uppercase << hex << setw(2) << setfill('0') << static_cast<int>(c);
+	}
+	return encoded.str();
 }
-
-/* link wysyłany z vivaldi do autoryzacji poczty gmail
- * https://accounts.google.com/o/oauth2/v2/auth/oauthchooseaccount?
- * client_id=17077306336-p93k4ki7ro01jq6804ahikkkroia6c1u.apps.googleusercontent.com&
- * redirect_uri=https%3A%2F%2Fmpognobbkildjkofajifpdfhcoklimli.chromiumapp.org%2F&
- * response_type=code&
- * code_challenge=3tRiF9cXHBKLRF2D8m537nJlOAGUmSbZpnpexBkodkg&
- * code_challenge_method=S256&
- * access_type=offline&
- * prompt=consent&
- * scope=https%3A%2F%2Fmail.google.com%2F%20
- * https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar%20
- * https%3A%2F%2Fwww.googleapis.com%2Fauth%2Ftasks%20openid%20
- * https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email&
- * login_hint=grzmot969%40gmail.com&
- * include_granted_scopes=true&
- * service=lso&
- * o2v=2&
- * flowName=GeneralOAuthFlow
- */
