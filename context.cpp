@@ -148,11 +148,11 @@ bool Context::getAccess()
     }
 
 	port = ntohs(addr.sin_port);
-    cerr << "Listening on port: " << port << endl;
+    if (verbose) cerr << "Listening on port: " << port << endl;
 	crypto.draw();
 	crypto.encode();
 	crypto.encrypt();
-	cerr << crypto;
+	if (verbose) cerr << crypto;
 	ostringstream command, options;
 	options << "response_type=code" << '&'
 		<< "redirect_uri=http://127.0.0.1:" << port << '&'
@@ -288,7 +288,6 @@ string Context::getJson(string&& text) const
 	if (start == -1) return value;
 	auto stop = text.find('}', start);
 	if (stop == -1) return value;
-	size_t n = 0;
 	if (stop < start) return value;
 	return text.substr(start, stop - start + 1);
 }
