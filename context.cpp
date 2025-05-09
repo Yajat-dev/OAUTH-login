@@ -99,20 +99,24 @@ bool Context::getAccess()
 	if (access) {
 		struct stat info;
 		stat(access.getName().c_str(), &info);
-		cerr << "Found access token file: " << access.getName() << endl;
+		if (verbose) cerr << "Found access token file: " << access.getName();
 		if (info.st_mtime > time(0)) {
 			access >> secret;
 			if (!secret.empty()) {
+				if (verbose) cerr << endl;
 				cout << secret;
 				return false;
 			}
 		}
-		cerr << "... but token has expired or been revoked" << endl;
-		File reaccess(home + MUTT_CONFIG + hint + "/refresh_token");
-		cerr << "Found refresh token file: " << reaccess.getName() << endl;
+		if (verbose) cerr << "... but token has expired or been revoked" << endl;
+	}
+
+	File reaccess(home + MUTT_CONFIG + hint + "/refresh_token");
+	if (reaccess) {
+		if (verbose) cerr << "Found refresh token file: " << reaccess.getName();
 		reaccess >> refresh;
 		if (!refresh.empty()) return true;
-		cerr << "... but it is empty" << endl;
+		if (verbose) cerr << "... but it is empty" << endl;
 	}
 
 	int server = socket(AF_INET, SOCK_STREAM, 0);
@@ -203,7 +207,7 @@ bool Context::getSecret()
 	SSL_library_init();
     SSL_load_error_strings();
 
-    cerr << endl << "About to get access token..." << endl;
+    if (debug) cerr << endl << "About to get access token..." << endl;
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
     if (!ctx) {
         cerr << "Can not create SSL context" << endl;
@@ -234,7 +238,7 @@ bool Context::getSecret()
         return false;
     }
 
-    cerr << "TLS/SSL handshake OK with " << host << "\n";
+    if (debug) cerr << "TLS/SSL handshake OK with " << host << "\n";
 	ostringstream output;
 	ostringstream content;
 	content 
@@ -256,17 +260,17 @@ bool Context::getSecret()
 		<< "Content-Length: " << append.size() << endl
 		<< endl
 		<< append;
-	cerr << endl << output.str() << endl;
+	if (debug) cerr << endl << output.str() << endl;
 	SSL_write(ssl, output.str().c_str(), output.str().size());
 	cerr << endl << "Getting access token..." << endl;
 	string response;
 	response.resize(2048);
 	auto n = SSL_read(ssl, (void*)response.data(), response.capacity()); 
 	response = getJson(std::move(response));
-	cerr << endl << response << endl;
+	if (debug) cerr << response << endl << endl;
 
 	secret = getToken("access_token", response);
-	refresh = getToken("refresh_token", response);
+	if (secret.empty() || refresh.empty()) refresh = getToken("refresh_token", response);
 	if (secret.empty()) return true; // repeat whole sequence
 	cout << secret;
 	auto time = getTime("expires_in", response);
