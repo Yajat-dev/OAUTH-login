@@ -10,7 +10,7 @@ Enter checked folder with `cd OAUTH-login`\
 Run `make` and `make install`. Installs to ~/.local/bin that should be in $PATH\
 otherwise you need full path to oauth.login.
 
-Can be run standalone `oauth.login user123@gmail.com` or with an e-mail client.
+Can be run standalone `oauth.login your.user.nick@gmail.com` or with an e-mail client.
 
 Tested with MUTT. An e-mail text client.\
 You need the following settings added to your .muttrc:
