@@ -56,6 +56,7 @@ bool getAccess()
 			if (!secret.empty()) {
 				if (context.verbose) cerr << endl;
 				cout << secret;
+				context.state = Context::State::token;
 				return false;
 			}
 		}
@@ -193,9 +194,11 @@ bool getAccess()
 		<< "code_verifier=" << crypto.base64() << '&'
 		<< "redirect_uri=http://127.0.0.1:" << port << '&'
 		<< "grant_type=authorization_code";
+		context.state = Context::State::access;
 	} else {
 		content << "refresh_token=" << refresh << '&'
 			<< "grant_type=refresh_token";
+		context.state = Context::State::refresh;
 	}
 	string append = content.str();
 	output << "POST /token HTTP/1.1" << endl

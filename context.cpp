@@ -46,27 +46,22 @@ void Context::parse(size_t n, char** argv)
 		else hint = arg;
 	}
 
-	if (!log.empty()) {
-		auto now = time(nullptr);
-		ofstream file(log.c_str(), ios::app);
-		file << put_time(localtime(&now), "%Y.%m.%d %H:%M:%S") << ' ' << *this;
-	}
-
-	if (help) cerr << argv[0] << R"EOF( [Options] <login hint>
+	if (help) cerr << argv[0] << R"EOF( [Options] email
 
 Parameter:
-file	filename to keep secrets
+email	gmail account
 
 Options:
 	no-parameter option may be combined following one leading -
 	space after option letter may be omitted, parameters are consumed until next space
 -h	display this help message and quit, helpfull to see other argument parsed
 -v	be verbose, if repeated be more verbose with debug info
+-l file	log to file, default ~/.mutt/oauth.login.log
+-r N	number of retries
 -c	stop to confirm some actions
 
 Example:
-
-)EOF";
+)EOF" << argv[0] << " user123@gmail.com\n" << endl;
 	cerr << "Parsed arguments:" << endl
 		<< *this << endl;
 
@@ -81,7 +76,13 @@ ostream& operator<<(ostream& oss, const Context& context) {
 		else oss << ", verbose";
 	}
 	if (context.confirm) oss << ", confirm";
-	oss << ", PID: " << getpid();
+	oss << ", PID:" << getpid();
+	if (context.state > Context::State::none) {
+		oss << ", action:";
+		if (context.state > Context::State::refresh) oss << "access";
+		else if (context.state > Context::State::token) oss << "refresh";
+		else oss << "token";
+	}
 	return oss << endl;
 }
 
@@ -92,6 +93,16 @@ bool Context::stop()
 
 Context::Context(){
 	verbose = debug = confirm = false;
+	state = State::none;
 	retry = 0;
 	home = getenv("HOME");
+}
+
+Context::~Context(){
+	if (!log.empty()) {
+		auto now = time(nullptr);
+		ofstream file(log.c_str(), ios::app);
+		file << put_time(localtime(&now), "%Y.%m.%d %H:%M:%S") << ' ' << *this;
+	}
+
 }
