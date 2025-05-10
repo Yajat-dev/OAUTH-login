@@ -7,15 +7,16 @@ Keeps tokens under user's local ~/.mutt/accounts folder ONLY.
 
 To build run `git clone git@github.com:Kontra2B/OAUTH-login`\
 Enter checked folder with `cd OAUTH-login`\
-Run `make` and `make install`. Installs to ~/.local/bin.
+Run `make` and `make install`. Installs to ~/.local/bin that should be in $PATH\
+otherwise you need full path to oauth.login.
 
 Tested with MUTT. An e-mail text client.\
 You need the following settings added to your .muttrc:
 ```
-set imap_user = "you.user.nickname@gmail.com"
+set imap_user = "your.user.nick@gmail.com"
 set imap_authenticators = "oauthbearer:xoauth2"
 set imap_oauth_refresh_command = "oauth.login ${imap_user} 2>/dev/null"
 set smtp_authenticators = "oauthbearer:xoauth2"
 set smtp_oauth_refresh_command = "oauth.login ${imap_user} 2>/dev/null"
 ```
-You may want to give full path to your oauth.login build if not installed with `make`
+Remove imap_pass and smtp_pass from .muttrc.
