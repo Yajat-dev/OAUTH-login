@@ -17,6 +17,7 @@ class Code {
 		void encrypt() { SHA256((const unsigned char*)base.c_str(), base.size(), hash); }
 		std::string challenge() const { return encode(hash, SHA256_DIGEST_LENGTH); }
 		void decode();
+		std::string urlEncode(const std::string&);
 		friend std::ostream& operator<<(std::ostream&s, const Code&);
 };
 
