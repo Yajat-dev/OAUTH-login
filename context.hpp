@@ -2,12 +2,13 @@
 
 #include <string>
 #include <variant>
-#include "code.hpp"
+#include <filesystem>
 
 struct Context {
 	bool verbose, debug, confirm, help;
 	int retry;
-	std::string home, hint, log;
+	std::filesystem::path home;
+	std::string hint, log;
 	using options = std::variant<std::monostate, int*, std::string*>;
 	private:
 	bool set(options&, const char*);

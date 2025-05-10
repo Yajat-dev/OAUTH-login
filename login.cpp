@@ -17,11 +17,14 @@
 
 #include "file.hpp"
 #include "context.hpp"
+#include "code.hpp"
 
 #define CLIENT_ID "1066306325374-itr5ih1ivquo8hmi841ts7mumv2vn2k4.apps.googleusercontent.com"
 #define CLIENT_SECRET "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"
 #define GOOGLE_APIS "oauth2.googleapis.com"
-#define MUTT_CONFIG "/.mutt/accounts/"
+#define MUTT_CONFIG ".mutt/accounts"
+#define ACCESS_TOKEN "access_token"
+#define REFRESH_TOKEN "refresh_token"
 
 using namespace std;
 Context context;
@@ -42,7 +45,7 @@ int main(int n, char** argv) {
 bool getAccess()
 {
 	string secret;
-	File access(context.home + MUTT_CONFIG + context.hint + "/access_token");
+	File access(context.home / MUTT_CONFIG / context.hint / ACCESS_TOKEN);
 	if (access) {
 		struct stat info;
 		stat(access.getName().c_str(), &info);
@@ -59,7 +62,7 @@ bool getAccess()
 	}
 
 	string refresh;
-	File reaccess(context.home + MUTT_CONFIG + context.hint + "/refresh_token");
+	File reaccess(context.home / MUTT_CONFIG / context.hint / REFRESH_TOKEN);
 	if (reaccess) {
 		if (context.verbose) cerr << "Found refresh token file: " << reaccess.getName();
 		reaccess >> refresh;
@@ -217,12 +220,14 @@ bool getAccess()
 	secret = getToken("access_token", response);
 	if (secret.empty() || refresh.empty()) refresh = getToken("refresh_token", response);
 	if (secret.empty()) return true; // repeat whole sequence
-	cout << secret;
 	auto time = getTime("expires_in", response);
 
 	utimbuf times = {0, time};
-	string name = context.home + MUTT_CONFIG + context.hint + "/access_token";
-	utime(name.c_str(), &times);
+	File token(context.home / MUTT_CONFIG / context.hint / ACCESS_TOKEN);
+	if (context.debug) cerr << "Changing time for: " << token.getName() << endl;
+	utime(token.getName().c_str(), &times);
+
+	cout << secret;
 	return false;
 }
 
@@ -247,7 +252,8 @@ string getToken(const string& token, const string& text)
 		getline(keys, value, '"');
 		getline(keys, value, '"');
 	}
-	File secret(context.home + MUTT_CONFIG + context.hint + '/' + token);
+	File secret(context.home / MUTT_CONFIG / context.hint / token);
+	if (context.debug) cerr << "Writing secret to: " << secret.getName() << endl;
 	secret << value;
 	return value;
 }
@@ -261,6 +267,7 @@ time_t getTime(string&& token, const string& text)
 	istringstream keys(text.substr(start));
 	getline(keys, dummy, ':');
 	keys >> value;
+	if (context.debug) cerr << "Secret expires in [s]: " << value << endl;
 	return value + time(0);
 }
 

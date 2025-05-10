@@ -37,7 +37,7 @@ void Context::parse(size_t n, char** argv)
 				else if (*arg == 'v') { if (verbose) debug = true; else verbose = true; }
 				// options with parameter
 				else if (*arg == 'r') option = &retry;
-				else if (*arg == 'l') { log = home + "/.mutt/" + "oauth.login.log"; option = &log; }
+				else if (*arg == 'l') { log = home / ".mutt" / "oauth.login.log"; option = &log; }
 				// options with parameter
 				if (set(option, arg + 1)) break;
 			}
