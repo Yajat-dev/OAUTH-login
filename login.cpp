@@ -19,6 +19,7 @@
 #include "context.hpp"
 #include "code.hpp"
 
+#define GOOGLE_ACCOUNTS "https://accounts.google.com/o/oauth2/v2/auth"
 #define CLIENT_ID "1066306325374-itr5ih1ivquo8hmi841ts7mumv2vn2k4.apps.googleusercontent.com"
 #define CLIENT_SECRET "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"
 #define GOOGLE_APIS "oauth2.googleapis.com"
@@ -31,7 +32,7 @@ Context context;
 
 bool getAccess();
 string getJson(string&&);
-string getToken(const string&, const string&);
+string getToken(string&&, const string&);
 time_t getTime(string&&, const string&);
 string urlEncode(const string&);
 
@@ -115,11 +116,8 @@ bool getAccess()
 			<< "client_id=" CLIENT_ID << '&'
 			<< "code_challenge=" << crypto.challenge() << '&'
 			<< "code_challenge_method=S256" << '&'
-			// << "include_granted_scopes=true" << '&'
 			<< "login_hint=" << context.hint;
-		command << "xdg-open 'https://accounts.google.com/o/oauth2/v2/auth?"
-			<< urlEncode(options.str())
-			<< "' >/dev/null";
+		command << "xdg-open '" GOOGLE_ACCOUNTS "?" << urlEncode(options.str()) << "' >/dev/null";
 		if (context.debug) cerr << endl << command.str() << endl;
 		system(command.str().c_str());
 		listen(server, 1);
@@ -242,7 +240,7 @@ string getJson(string&& text)
 	return text.substr(start, stop - start + 1);
 }
 
-string getToken(const string& token, const string& text)
+string getToken(string&& token, const string& text)
 {
 	string value;
 	auto start = text.find(token);
@@ -260,12 +258,12 @@ string getToken(const string& token, const string& text)
 
 time_t getTime(string&& token, const string& text)
 {
-	unsigned long value = 0;
+	time_t value = 0;
 	string dummy;
 	auto start = text.find(token);
 	if (start == -1) return value;
 	istringstream keys(text.substr(start));
-	getline(keys, dummy, ':');
+	keys >> dummy;
 	keys >> value;
 	if (context.debug) cerr << "Secret expires in [s]: " << value << endl;
 	return value + time(0);
