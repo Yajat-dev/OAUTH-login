@@ -39,7 +39,7 @@ int main(int n, char** argv) {
 	context.parse(n, argv);
 	while (getAccess()) 
 		if (context.stop()) break;
-    return 0;
+	return 0;
 }
 
 bool getAccess()
@@ -217,8 +217,8 @@ bool getAccess()
 	response = getJson(std::move(response));
 	if (context.debug) cerr << response << endl << endl;
 
-	secret = getToken("access_token", response);
-	if (secret.empty() || refresh.empty()) refresh = getToken("refresh_token", response);
+	secret = getToken(ACCESS_TOKEN, response);
+	if (secret.empty() || refresh.empty()) refresh = getToken(REFRESH_TOKEN, response);
 	if (secret.empty()) return true; // repeat whole sequence
 	auto time = getTime("expires_in", response);
 
